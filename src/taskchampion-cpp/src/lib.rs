@@ -306,6 +306,7 @@ mod ffi {
         Completed,
         Deleted,
         Recurring,
+        Iterative,
         Unknown,
     }
 
@@ -1211,6 +1212,7 @@ impl Task {
             taskchampion::Status::Completed => ffi::Status::Completed,
             taskchampion::Status::Deleted => ffi::Status::Deleted,
             taskchampion::Status::Recurring => ffi::Status::Recurring,
+            taskchampion::Status::Iterative => ffi::Status::Iterative,
             taskchampion::Status::Unknown(_) => ffi::Status::Unknown,
         }
     }
@@ -1358,6 +1360,7 @@ impl Task {
             ffi::Status::Completed => tc::Status::Completed,
             ffi::Status::Deleted => tc::Status::Deleted,
             ffi::Status::Recurring => tc::Status::Recurring,
+            ffi::Status::Iterative => tc::Status::Iterative,
             _ => unreachable!("ffi::Status variants are exhaustive"),
         };
         Ok(self.0.set_status(status, operations_ref(ops))?)

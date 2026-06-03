@@ -160,6 +160,8 @@ Task::status Task::textToStatus(const std::string& input) {
     return Task::deleted;
   else if (input[0] == 'r')
     return Task::recurring;
+  else if (input[0] == 'i')
+    return Task::iterative;
   // for compatibility, parse `w` as pending; Task::getStatus will
   // apply the virtual waiting status if appropriate
   else if (input[0] == 'w')
@@ -180,6 +182,8 @@ std::string Task::statusToText(Task::status s) {
     return "completed";
   else if (s == Task::deleted)
     return "deleted";
+  else if (s == Task::iterative)
+    return "iterative";
 
   return "pending";
 }
@@ -356,7 +360,8 @@ bool Task::is_empty() const { return data.size() == 0; }
 // Ready means pending, not blocked and either not scheduled or scheduled before
 // now.
 bool Task::is_ready() const {
-  return getStatus() == Task::pending && !is_blocked &&
+  Task::status s = getStatus();
+  return (s == Task::pending || s == Task::iterative) && !is_blocked &&
          (!has("scheduled") || Datetime("now").operator>(get_date("scheduled")));
 }
 
@@ -1153,7 +1158,8 @@ bool Task::hasTag(const std::string& tag) const {
     if (tag == "PARENT") return has("mask") || has("last");  // 2017-01-07: Deprecated in 2.6.0
     if (tag == "TEMPLATE") return has("last") || has("mask");
     if (tag == "WAITING") return is_waiting();
-    if (tag == "PENDING") return getStatus() == Task::pending;
+    if (tag == "PENDING") return getStatus() == Task::pending || getStatus() == Task::iterative;
+    if (tag == "ITERATIVE") return getStatus() == Task::iterative;
     if (tag == "COMPLETED") return getStatus() == Task::completed;
     if (tag == "DELETED") return getStatus() == Task::deleted;
 #ifdef PRODUCT_TASKWARRIOR
@@ -1458,10 +1464,16 @@ void Task::validate(bool applyDefault /* = true */) {
   } else
     set("uuid", uuid());
 
+  // Iterative tasks get a special status when `iter` is set.
+  if (status == Task::pending && has("iter") && get("iter") != "" &&
+      (!has("parent") || get("parent") == "") && (!has("template") || get("template") == "")) {
+    status = Task::iterative;
+  }
+
   // TODO Obsolete remove for 3.0.0
   // Recurring tasks get a special status.
-  if (status == Task::pending && has("due") && has("recur") &&
-      (!has("parent") || get("parent") == "") && (!has("template") || get("template") == "")) {
+  else if (status == Task::pending && has("due") && has("recur") &&
+           (!has("parent") || get("parent") == "") && (!has("template") || get("template") == "")) {
     status = Task::recurring;
   }
   /*
