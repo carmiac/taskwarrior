@@ -159,3 +159,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONTAINER: ${{ matrix.dockerfile }}
+
+  test-haiku:
+      name: "Haiku r1beta5"
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v7
+
+        - name: Build and test in Haiku VM
+          uses: vmactions/haiku-vm@v1
+          with:
+            release: r1beta5
+            usesh: true
+            copyback: false
+            cache-after-prepare: true
+            prepare: |
+              pkgman install -y cmd:cmake cmd:make cmd:python3
+            run: |
+              cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+              cmake --build build --target test_runner --target task_executable
+              ctest --test-dir build --output-on-failure
